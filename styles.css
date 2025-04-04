@@ -1,3 +1,5 @@
+/* START OF FILE styles.css */
+
 * {
     margin: 0;
     padding: 0;
@@ -164,7 +166,7 @@ h1 {
     font-size: 0.95rem;
 }
 
-.setting-item input {
+.setting-item input[type="number"] { /* Target only number inputs */
     padding: 0.8rem;
     border: 1px solid #333;
     background-color: #252525;
@@ -172,17 +174,104 @@ h1 {
     font-size: 1rem;
     color: #e0e0e0;
     transition: all 0.3s ease;
+    width: 100%; /* Ensure full width within grid cell */
 }
 
-.setting-item input:focus {
+.setting-item input[type="number"]:focus {
     outline: none;
     border-color: #3a86ff;
     box-shadow: 0 0 8px rgba(58, 134, 255, 0.3);
 }
 
+/* Styles for the checkbox setting */
+.setting-item-checkbox {
+    flex-direction: row; /* Align label and checkbox horizontally */
+    align-items: center; /* Vertically center items */
+    gap: 0.8rem; /* Add space between label and checkbox */
+}
+
+.setting-item-checkbox label {
+    margin-bottom: 0; /* Remove bottom margin for horizontal layout */
+}
+
+.setting-item input[type="checkbox"] {
+    width: 20px; /* Adjust size as needed */
+    height: 20px;
+    cursor: pointer;
+    accent-color: #3a86ff; /* Style the checkmark color */
+}
+
+
 #save-settings {
     width: 100%;
 }
+
+/* History Section Styles */
+.history {
+    background-color: #1a1a1a;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(75, 75, 75, 0.2);
+}
+
+.history h2 {
+    margin-bottom: 1.5rem;
+    color: #3a86ff; /* Consistent heading color */
+    font-size: 1.5rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.history h2::after {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 3px;
+    background: #3a86ff;
+    bottom: 0;
+    left: 0;
+    border-radius: 3px;
+}
+
+#history-list {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
+    max-height: 200px; /* Limit height and add scroll */
+    overflow-y: auto;
+    border: 1px solid #333; /* Add a subtle border */
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+#history-list li {
+    background-color: #252525;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    color: #c0c0c0;
+    display: flex;
+    justify-content: space-between; /* Space out text and time */
+    align-items: center;
+}
+
+#history-list li:last-child {
+    margin-bottom: 0;
+}
+
+#history-list li .timestamp { /* Style for the timestamp */
+    font-size: 0.8rem;
+    color: #888;
+}
+
+#clear-history-btn {
+    width: 100%;
+    margin-top: 1rem; /* Add space above the button */
+}
+
 
 footer {
     text-align: center;
@@ -206,8 +295,15 @@ footer {
 }
 
 .break-mode #session-label {
-    color: #06d6a0;
+    /* Keep label color consistent or change if desired */
+     color: #a0a0a0; /* Or #06d6a0 if you prefer green text */
 }
+.break-mode #session-label::before { /* Add visual indicator for break */
+    content: "BREAK: ";
+    color: #06d6a0;
+    font-weight: 600;
+}
+
 
 /* Media queries for responsiveness */
 @media (max-width: 768px) {
@@ -216,14 +312,19 @@ footer {
         margin-top: 1rem;
         margin-bottom: 1rem;
     }
-    
+
     .timer-circle {
         width: 200px;
         height: 200px;
         font-size: 2.5rem;
     }
-    
+
     .settings-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Stack settings vertically */
+    }
+    .setting-item-checkbox {
+        justify-content: flex-start; /* Align checkbox left on smaller screens */
     }
 }
+
+/* END OF FILE styles.css */
