@@ -166,7 +166,7 @@ h1 {
     font-size: 0.95rem;
 }
 
-.setting-item input[type="number"] { /* Target only number inputs */
+.setting-item input[type="number"] {
     padding: 0.8rem;
     border: 1px solid #333;
     background-color: #252525;
@@ -174,7 +174,7 @@ h1 {
     font-size: 1rem;
     color: #e0e0e0;
     transition: all 0.3s ease;
-    width: 100%; /* Ensure full width within grid cell */
+    width: 100%;
 }
 
 .setting-item input[type="number"]:focus {
@@ -185,28 +185,27 @@ h1 {
 
 /* Styles for the checkbox setting */
 .setting-item-checkbox {
-    flex-direction: row; /* Align label and checkbox horizontally */
-    align-items: center; /* Vertically center items */
-    gap: 0.8rem; /* Add space between label and checkbox */
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8rem;
 }
 
 .setting-item-checkbox label {
-    margin-bottom: 0; /* Remove bottom margin for horizontal layout */
+    margin-bottom: 0;
 }
 
 .setting-item input[type="checkbox"] {
-    width: 20px; /* Adjust size as needed */
+    width: 20px;
     height: 20px;
     cursor: pointer;
-    accent-color: #3a86ff; /* Style the checkmark color */
+    accent-color: #3a86ff;
 }
-
 
 #save-settings {
     width: 100%;
 }
 
-/* History Section Styles */
+/* History Section */
 .history {
     background-color: #1a1a1a;
     border-radius: 15px;
@@ -218,7 +217,7 @@ h1 {
 
 .history h2 {
     margin-bottom: 1.5rem;
-    color: #3a86ff; /* Consistent heading color */
+    color: #3a86ff;
     font-size: 1.5rem;
     position: relative;
     padding-bottom: 0.5rem;
@@ -239,9 +238,9 @@ h1 {
     list-style: none;
     padding: 0;
     margin-bottom: 1.5rem;
-    max-height: 200px; /* Limit height and add scroll */
+    max-height: 200px;
     overflow-y: auto;
-    border: 1px solid #333; /* Add a subtle border */
+    border: 1px solid #333;
     border-radius: 8px;
     padding: 0.5rem;
 }
@@ -254,7 +253,7 @@ h1 {
     font-size: 0.95rem;
     color: #c0c0c0;
     display: flex;
-    justify-content: space-between; /* Space out text and time */
+    justify-content: space-between;
     align-items: center;
 }
 
@@ -262,17 +261,166 @@ h1 {
     margin-bottom: 0;
 }
 
-#history-list li .timestamp { /* Style for the timestamp */
+#history-list li .timestamp {
     font-size: 0.8rem;
     color: #888;
 }
 
 #clear-history-btn {
     width: 100%;
-    margin-top: 1rem; /* Add space above the button */
+    margin-top: 1rem;
 }
 
+/* Stats Section (NEW) */
+.stats {
+    background-color: #1a1a1a;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(75, 75, 75, 0.2);
+}
 
+.stats h2 {
+    margin-bottom: 1.5rem;
+    color: #3a86ff;
+    font-size: 1.5rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.stats h2::after {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 3px;
+    background: #3a86ff;
+    bottom: 0;
+    left: 0;
+    border-radius: 3px;
+}
+
+#focus-stats {
+    font-size: 1rem;
+    color: #c0c0c0;
+}
+
+/* Daily Tip Section (NEW) */
+.daily-tip {
+    background-color: #1a1a1a;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(75, 75, 75, 0.2);
+}
+
+.daily-tip h2 {
+    margin-bottom: 1rem;
+    color: #3a86ff;
+    font-size: 1.5rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.daily-tip h2::after {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 3px;
+    background: #3a86ff;
+    bottom: 0;
+    left: 0;
+    border-radius: 3px;
+}
+
+#tip-content {
+    margin-bottom: 1rem;
+    color: #c0c0c0;
+    font-size: 1rem;
+}
+
+/* GPT Assistant Section (NEW) */
+.assistant {
+    background-color: #1a1a1a;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(75, 75, 75, 0.2);
+}
+
+.assistant h2 {
+    margin-bottom: 1rem;
+    color: #3a86ff;
+    font-size: 1.5rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.assistant h2::after {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 3px;
+    background: #3a86ff;
+    bottom: 0;
+    left: 0;
+    border-radius: 3px;
+}
+
+.assistant label {
+    display: block;
+    margin: 1rem 0 0.5rem;
+    color: #a0a0a0;
+}
+
+.assistant input[type="password"],
+.assistant textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #333;
+    background-color: #252525;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.assistant input[type="password"]:focus,
+.assistant textarea:focus {
+    outline: none;
+    border-color: #3a86ff;
+    box-shadow: 0 0 8px rgba(58, 134, 255, 0.3);
+}
+
+#assistant-answer {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    color: #c0c0c0;
+    background-color: #252525;
+    padding: 1rem;
+    border-radius: 8px;
+    min-height: 50px;
+}
+
+/* Break session styling */
+.break-mode .timer-circle {
+    border-color: #06d6a0;
+    box-shadow: 0 0 30px rgba(6, 214, 160, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.break-mode #session-label {
+    color: #a0a0a0;
+}
+
+.break-mode #session-label::before {
+    content: "BREAK: ";
+    color: #06d6a0;
+    font-weight: 600;
+}
+
+/* Footer */
 footer {
     text-align: center;
     color: #777;
@@ -288,24 +436,7 @@ footer {
     color: #666;
 }
 
-/* Break session styling */
-.break-mode .timer-circle {
-    border-color: #06d6a0;
-    box-shadow: 0 0 30px rgba(6, 214, 160, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-.break-mode #session-label {
-    /* Keep label color consistent or change if desired */
-     color: #a0a0a0; /* Or #06d6a0 if you prefer green text */
-}
-.break-mode #session-label::before { /* Add visual indicator for break */
-    content: "BREAK: ";
-    color: #06d6a0;
-    font-weight: 600;
-}
-
-
-/* Media queries for responsiveness */
+/* Responsive */
 @media (max-width: 768px) {
     .container {
         padding: 1.5rem;
@@ -320,10 +451,11 @@ footer {
     }
 
     .settings-grid {
-        grid-template-columns: 1fr; /* Stack settings vertically */
+        grid-template-columns: 1fr;
     }
+
     .setting-item-checkbox {
-        justify-content: flex-start; /* Align checkbox left on smaller screens */
+        justify-content: flex-start;
     }
 }
 
