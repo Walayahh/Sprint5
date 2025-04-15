@@ -1,20 +1,22 @@
-// START OF FILE script.js
+/******************************************************
+ *                 STUDYBUDDY SCRIPT.JS
+ ******************************************************/
 
-// Timer variables
+// -------------------- Pomodoro Timer Variables --------------------
 let workDuration = 25;
 let breakDuration = 5;
 let longBreakDuration = 15;
 let sessionsBeforeLongBreak = 4;
-let soundEnabled = true; // New setting for sound alerts
+let soundEnabled = true;
 let isRunning = false;
 let isPaused = false;
 let isBreak = false;
 let currentSession = 1;
 let timeLeft = workDuration * 60;
 let timer;
-let sessionHistory = []; // New array for history tracking
+let sessionHistory = [];
 
-// DOM elements
+// -------------------- DOM Elements --------------------
 const minutesEl = document.getElementById('minutes');
 const secondsEl = document.getElementById('seconds');
 const sessionLabelEl = document.getElementById('session-label');
@@ -26,13 +28,25 @@ const workDurationInput = document.getElementById('work-duration');
 const breakDurationInput = document.getElementById('break-duration');
 const longBreakDurationInput = document.getElementById('long-break-duration');
 const sessionsBeforeLongBreakInput = document.getElementById('sessions-before-long-break');
-const soundEnabledCheckbox = document.getElementById('sound-enabled'); // New DOM element
+const soundEnabledCheckbox = document.getElementById('sound-enabled');
 const timerCircle = document.querySelector('.timer-circle');
-const historyListEl = document.getElementById('history-list'); // New DOM element
-const clearHistoryBtn = document.getElementById('clear-history-btn'); // New DOM element
+const historyListEl = document.getElementById('history-list');
+const clearHistoryBtn = document.getElementById('clear-history-btn');
 
-// --- Audio Setup ---
-// NOTE: Ensure you have 'work_end.mp3' and 'break_end.mp3' in a 'sounds' folder.
+// NEW: Focus Stats
+const focusStatsEl = document.getElementById('focus-stats');
+
+// NEW: Daily Tips
+const tipContentEl = document.getElementById('tip-content');
+const refreshTipBtn = document.getElementById('refresh-tip-btn');
+
+// NEW: GPT-Based Study Assistant
+const apiKeyInput = document.getElementById('api-key-input');
+const questionInput = document.getElementById('question-input');
+const askBtn = document.getElementById('ask-btn');
+const assistantAnswerEl = document.getElementById('assistant-answer');
+
+// -------------------- Audio Setup --------------------
 let workEndSound, breakEndSound;
 try {
     workEndSound = new Audio('sounds/work_end.mp3');
@@ -51,22 +65,24 @@ function playSound(sound) {
     }
 }
 
-// --- History Functions ---
+// -------------------- History Functions --------------------
 function renderHistory() {
-    if (!historyListEl) return; // Guard clause
-    historyListEl.innerHTML = ''; // Clear existing list
+    if (!historyListEl) return;
+    historyListEl.innerHTML = '';
     sessionHistory.forEach(entry => {
         const li = document.createElement('li');
         const textSpan = document.createElement('span');
         const timeSpan = document.createElement('span');
 
         textSpan.textContent = `Session ${entry.sessionNumber} (${entry.duration} min)`;
-        timeSpan.textContent = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        timeSpan.textContent = new Date(entry.timestamp)
+            .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         timeSpan.classList.add('timestamp');
 
         li.appendChild(textSpan);
         li.appendChild(timeSpan);
-        historyListEl.prepend(li); // Add newest entries to the top
+        // Newest entries on top
+        historyListEl.prepend(li);
     });
 }
 
@@ -81,21 +97,23 @@ function loadHistory() {
             sessionHistory = JSON.parse(savedHistory);
         } catch (e) {
             console.error("Error parsing session history from localStorage", e);
-            sessionHistory = []; // Reset if data is corrupt
+            sessionHistory = [];
         }
     }
-    renderHistory(); // Render loaded history
+    renderHistory();
 }
 
 function addHistoryEntry(sessionNumber, duration) {
     const newEntry = {
-        sessionNumber: sessionNumber,
-        duration: duration, // Store the duration of the completed session
-        timestamp: new Date().toISOString() // Use ISO string for reliable storage/parsing
+        sessionNumber,
+        duration,
+        timestamp: new Date().toISOString()
     };
     sessionHistory.push(newEntry);
     saveHistory();
     renderHistory();
+    // Update Focus Stats each time a session is completed
+    updateFocusStats();
 }
 
 function clearHistory() {
@@ -103,41 +121,34 @@ function clearHistory() {
         sessionHistory = [];
         saveHistory();
         renderHistory();
+        updateFocusStats(); // Also update stats after clearing
     }
 }
 
-// Load settings and history from localStorage
+// -------------------- Load/Save Settings --------------------
 function loadSettings() {
-    // Load Timer Settings
     const savedSettings = localStorage.getItem('studyBuddySettings');
     if (savedSettings) {
-         try {
+        try {
             const settings = JSON.parse(savedSettings);
             workDuration = settings.workDuration || 25;
             breakDuration = settings.breakDuration || 5;
             longBreakDuration = settings.longBreakDuration || 15;
             sessionsBeforeLongBreak = settings.sessionsBeforeLongBreak || 4;
-            // Load sound setting (default to true if not found)
             soundEnabled = settings.soundEnabled !== undefined ? settings.soundEnabled : true;
 
-            // Update input fields
+            // Update UI
             workDurationInput.value = workDuration;
             breakDurationInput.value = breakDuration;
             longBreakDurationInput.value = longBreakDuration;
             sessionsBeforeLongBreakInput.value = sessionsBeforeLongBreak;
             soundEnabledCheckbox.checked = soundEnabled;
-
         } catch(e) {
             console.error("Error parsing settings from localStorage", e);
-            // Use default values if parsing fails
-             workDuration = 25;
-             breakDuration = 5;
-             longBreakDuration = 15;
-             sessionsBeforeLongBreak = 4;
-             soundEnabled = true;
+            // Use defaults
         }
     } else {
-        // Set defaults if no settings saved
+        // Defaults if no settings saved
         workDurationInput.value = workDuration;
         breakDurationInput.value = breakDuration;
         longBreakDurationInput.value = longBreakDuration;
@@ -145,35 +156,41 @@ function loadSettings() {
         soundEnabledCheckbox.checked = soundEnabled;
     }
 
-    // Load History
+    // Also load stored GPT API key if any
+    const storedApiKey = localStorage.getItem('openAiApiKey');
+    if (storedApiKey) {
+        apiKeyInput.value = storedApiKey; // For convenience
+    }
+
+    // Load history
     loadHistory();
 
-    // Reset timer display based on loaded settings
-    resetTimer(); // Call resetTimer here AFTER loading settings
+    // Reset timer after loading
+    resetTimer();
+
+    // Load daily tip
+    loadDailyTip();
+    updateFocusStats(); // Refresh stats after load
 }
 
-
-// Save settings to localStorage
 function saveSettings() {
-    // Get values from inputs
-    workDuration = parseInt(workDurationInput.value) || 25; // Add fallback default
+    workDuration = parseInt(workDurationInput.value) || 25;
     breakDuration = parseInt(breakDurationInput.value) || 5;
     longBreakDuration = parseInt(longBreakDurationInput.value) || 15;
     sessionsBeforeLongBreak = parseInt(sessionsBeforeLongBreakInput.value) || 4;
-    soundEnabled = soundEnabledCheckbox.checked; // Get sound setting
+    soundEnabled = soundEnabledCheckbox.checked;
 
-    // Basic Validation (optional but good)
+    // Basic validation
     if (workDuration < 1) workDuration = 1;
     if (breakDuration < 1) breakDuration = 1;
     if (longBreakDuration < 1) longBreakDuration = 1;
     if (sessionsBeforeLongBreak < 1) sessionsBeforeLongBreak = 1;
 
-    // Update input fields in case validation changed values
+    // Update UI in case validation changed values
     workDurationInput.value = workDuration;
     breakDurationInput.value = breakDuration;
     longBreakDurationInput.value = longBreakDuration;
     sessionsBeforeLongBreakInput.value = sessionsBeforeLongBreak;
-
 
     // Save to localStorage
     const settings = {
@@ -181,24 +198,24 @@ function saveSettings() {
         breakDuration,
         longBreakDuration,
         sessionsBeforeLongBreak,
-        soundEnabled // Save sound setting
+        soundEnabled
     };
-
     localStorage.setItem('studyBuddySettings', JSON.stringify(settings));
 
-    // Reset timer with new settings if timer is not running
+    // Save GPT API key (if any)
+    if (apiKeyInput.value) {
+        localStorage.setItem('openAiApiKey', apiKeyInput.value);
+    }
+
     if (!isRunning) {
         resetTimer();
     } else {
-         // If timer is running, maybe just update the display?
-         // Or prompt user that changes will apply on next reset?
-         // For simplicity now, changes apply on next reset or session end.
-         console.log("Settings saved. Changes will apply on next reset or session.");
+        console.log("Settings saved. Changes will apply on next reset or session end.");
     }
-     alert("Settings saved!"); // Feedback to user
+    alert("Settings saved!");
 }
 
-// Update timer display
+// -------------------- Timer UI --------------------
 function updateDisplay() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -206,34 +223,25 @@ function updateDisplay() {
     minutesEl.textContent = minutes < 10 ? `0${minutes}` : minutes;
     secondsEl.textContent = seconds < 10 ? `0${seconds}` : seconds;
 
-    // Update document title with timer and status
-    const status = isBreak ? (sessionLabelEl.textContent.includes("LONG") ? "Long Break" : "Short Break") : "Focus Time";
+    const status = isBreak
+        ? (sessionLabelEl.textContent.includes("LONG") ? "Long Break" : "Short Break")
+        : "Focus Time";
     document.title = `${minutesEl.textContent}:${secondsEl.textContent} - ${status} - StudyBuddy`;
 }
 
-// Start timer
 function startTimer() {
-    if (isRunning && !isPaused) return; // Already running
+    if (isRunning && !isPaused) return;
 
-    if (!isRunning) { // If starting from a fresh state or reset
-        timeLeft = isBreak ? timeLeft : workDuration * 60; // Use current timeLeft if resuming break, else start work session
+    if (!isRunning) {
+        timeLeft = isBreak ? timeLeft : workDuration * 60; // fresh session or new break
     }
 
     isRunning = true;
     isPaused = false;
-
-    // Update button states
     startBtn.disabled = true;
     pauseBtn.disabled = false;
-    pauseBtn.textContent = "Pause"; // Ensure text is correct
-    // Disable settings inputs while running
-    workDurationInput.disabled = true;
-    breakDurationInput.disabled = true;
-    longBreakDurationInput.disabled = true;
-    sessionsBeforeLongBreakInput.disabled = true;
-    soundEnabledCheckbox.disabled = true;
-    saveSettingsBtn.disabled = true;
-
+    pauseBtn.textContent = "Pause";
+    disableSettings(true);
 
     timer = setInterval(() => {
         if (timeLeft > 0) {
@@ -241,13 +249,12 @@ function startTimer() {
             updateDisplay();
         } else {
             clearInterval(timer);
-            isRunning = false; // Timer stops naturally here
-
-            // --- Session Transition Logic ---
+            isRunning = false;
+            // Session ended
             if (!isBreak) {
-                // Completed a work session
-                playSound(workEndSound); // Play sound
-                addHistoryEntry(currentSession, workDuration); // Add to history BEFORE incrementing currentSession
+                // Work session done
+                playSound(workEndSound);
+                addHistoryEntry(currentSession, workDuration);
 
                 isBreak = true;
                 if (currentSession % sessionsBeforeLongBreak === 0) {
@@ -258,93 +265,173 @@ function startTimer() {
                     sessionLabelEl.textContent = `SHORT BREAK (${breakDuration} min)`;
                 }
                 document.body.classList.add('break-mode');
-                // Style update is handled by CSS class now
             } else {
-                // Completed a break session
-                playSound(breakEndSound); // Play sound
+                // Break session done
+                playSound(breakEndSound);
 
                 isBreak = false;
-                currentSession++; // Increment session count only after a break finishes
+                currentSession++;
                 timeLeft = workDuration * 60;
                 sessionLabelEl.textContent = `FOCUS TIME (${workDuration} min)`;
                 document.body.classList.remove('break-mode');
-                 // Style update is handled by CSS class now
             }
-
             updateDisplay();
-            // Auto-start the next session (optional, could require user to click start again)
             startTimer();
         }
     }, 1000);
 }
 
-// Pause timer
 function pauseTimer() {
     if (!isRunning || isPaused) return;
-
     clearInterval(timer);
     isPaused = true;
-    isRunning = false; // Treat paused as not actively running the interval
+    isRunning = false;
     pauseBtn.textContent = "Resume";
-    // Re-enable settings when paused
-    workDurationInput.disabled = false;
-    breakDurationInput.disabled = false;
-    longBreakDurationInput.disabled = false;
-    sessionsBeforeLongBreakInput.disabled = false;
-    soundEnabledCheckbox.disabled = false;
-    saveSettingsBtn.disabled = false;
+    disableSettings(false);
 }
 
-// Resume timer (uses startTimer logic)
 function resumeTimer() {
-    if (!isPaused) return; // Can only resume if paused
-
-    isPaused = false; // Set paused to false before calling start
+    if (!isPaused) return;
+    isPaused = false;
     startTimer();
-    pauseBtn.textContent = "Pause"; // Set text back immediately
+    pauseBtn.textContent = "Pause";
 }
 
-// Reset timer
 function resetTimer() {
     clearInterval(timer);
     isRunning = false;
     isPaused = false;
     isBreak = false;
-    currentSession = 1; // Reset session count
-    timeLeft = workDuration * 60; // Reset time to WORK duration
+    currentSession = 1;
+    timeLeft = workDuration * 60;
 
-    // Update display
     updateDisplay();
-    sessionLabelEl.textContent = `FOCUS TIME (${workDuration} min)`; // Include duration
+    sessionLabelEl.textContent = `FOCUS TIME (${workDuration} min)`;
 
-    // Reset button states
     startBtn.disabled = false;
     pauseBtn.disabled = true;
     pauseBtn.textContent = "Pause";
-
-    // Reset styles
     document.body.classList.remove('break-mode');
-    // Style update handled by CSS
-
-    // Re-enable settings inputs on reset
-    workDurationInput.disabled = false;
-    breakDurationInput.disabled = false;
-    longBreakDurationInput.disabled = false;
-    sessionsBeforeLongBreakInput.disabled = false;
-    soundEnabledCheckbox.disabled = false;
-    saveSettingsBtn.disabled = false;
-
-     // Reset title
+    disableSettings(false);
     document.title = "StudyBuddy - Smart Study Timer";
 }
 
-// Event listeners
+function disableSettings(disable) {
+    workDurationInput.disabled = disable;
+    breakDurationInput.disabled = disable;
+    longBreakDurationInput.disabled = disable;
+    sessionsBeforeLongBreakInput.disabled = disable;
+    soundEnabledCheckbox.disabled = disable;
+    saveSettingsBtn.disabled = disable;
+    apiKeyInput.disabled = disable; // Also disable/enable GPT API key field
+}
+
+// -------------------- Focus Stats (Ticket #11) --------------------
+function updateFocusStats() {
+    // Count total sessions in history
+    const totalSessions = sessionHistory.length;
+
+    // Count how many sessions happened "today"
+    const today = new Date().toDateString();
+    const todaySessions = sessionHistory.filter(entry => {
+        const entryDate = new Date(entry.timestamp).toDateString();
+        return entryDate === today;
+    }).length;
+
+    focusStatsEl.textContent =
+        `Today’s Sessions: ${todaySessions} | Total Sessions: ${totalSessions}`;
+}
+
+// -------------------- Daily Tip (Ticket #10) --------------------
+function loadDailyTip() {
+    // Check date in localStorage
+    const lastTipDate = localStorage.getItem('lastTipDate');
+    const today = new Date().toDateString();
+
+    if (lastTipDate === today) {
+        // Already shown a tip today; load stored tip
+        const storedTip = localStorage.getItem('dailyTip');
+        if (storedTip) {
+            tipContentEl.textContent = storedTip;
+            return;
+        }
+    }
+    // Otherwise, fetch a new tip
+    fetchDailyTip();
+}
+
+function fetchDailyTip(forceNew = false) {
+    // In a real app, you'd do:
+    // fetch("https://example.com/api/productivity-tips")
+    //   .then(res => res.json())
+    //   .then(data => { ... })
+
+    // For demonstration, we'll pick from an array.
+    const tips = [
+        "Take a few minutes each day to plan your study schedule.",
+        "Use active recall: try to quiz yourself instead of just reading notes.",
+        "Prioritize tasks using the Eisenhower Matrix: urgent vs. important.",
+        "Set realistic goals for each study session to avoid burnout.",
+        "Review your notes at the end of each day to reinforce memory."
+    ];
+
+    const randomTip = tips[Math.floor(Math.random() * tips.length)];
+    tipContentEl.textContent = randomTip;
+
+    const today = new Date().toDateString();
+    localStorage.setItem('lastTipDate', today);
+    localStorage.setItem('dailyTip', randomTip);
+}
+
+// -------------------- GPT-Based Study Assistant (Ticket #9) --------------------
+async function askGptQuestion(question) {
+    const apiKey = localStorage.getItem('openAiApiKey') || ""; // from localStorage
+    if (!apiKey) {
+        throw new Error("No OpenAI API key found. Please enter your key in Settings.");
+    }
+
+    // This example uses the Chat Completion endpoint (gpt-3.5 style).
+    // If you prefer Completions, adjust accordingly.
+    const url = "https://api.openai.com/v1/chat/completions";
+    const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+    };
+    const body = {
+        model: "gpt-3.5-turbo",
+        messages: [
+            { role: "system", content: "You are a helpful study assistant." },
+            { role: "user", content: question }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+    };
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        throw new Error(`OpenAI API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data && data.choices && data.choices.length > 0) {
+        return data.choices[0].message.content.trim();
+    } else {
+        throw new Error("No answer returned from GPT");
+    }
+}
+
+// -------------------- Event Listeners --------------------
 startBtn.addEventListener('click', startTimer);
 
 pauseBtn.addEventListener('click', () => {
     if (isPaused) {
         resumeTimer();
-    } else if (isRunning) { // Only allow pause if actually running
+    } else if (isRunning) {
         pauseTimer();
     }
 });
@@ -353,10 +440,36 @@ resetBtn.addEventListener('click', resetTimer);
 
 saveSettingsBtn.addEventListener('click', saveSettings);
 
-clearHistoryBtn.addEventListener('click', clearHistory); // Add listener for clear history
+clearHistoryBtn.addEventListener('click', clearHistory);
 
-// Initialize
-loadSettings(); // Load settings AND history on page load
-// updateDisplay(); // updateDisplay is called within resetTimer inside loadSettings
+refreshTipBtn.addEventListener('click', () => {
+    // Force a new tip (ignores the once-a-day limit)
+    fetchDailyTip(true);
+});
 
-// END OF FILE script.js
+// GPT Assistant
+askBtn.addEventListener('click', async () => {
+    const question = questionInput.value.trim();
+    if (!question) {
+        assistantAnswerEl.textContent = "Please enter a question.";
+        return;
+    }
+
+    // Save API key to localStorage if typed/changed
+    if (apiKeyInput.value) {
+        localStorage.setItem('openAiApiKey', apiKeyInput.value);
+    }
+
+    assistantAnswerEl.textContent = "Thinking...";
+    try {
+        const answer = await askGptQuestion(question);
+        assistantAnswerEl.textContent = answer;
+    } catch (err) {
+        console.error(err);
+        assistantAnswerEl.textContent = `Error: ${err.message}`;
+    }
+});
+
+// -------------------- Initialize --------------------
+loadSettings();
+updateDisplay();
