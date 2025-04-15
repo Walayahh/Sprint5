@@ -12,6 +12,7 @@
         <h1>StudyBuddy</h1>
         <p class="subtitle">Smart Study Timer & Break Manager</p>
 
+        <!-- Timer Display Section -->
         <div class="timer-display">
             <div class="timer-circle">
                 <span id="minutes">25</span>:<span id="seconds">00</span>
@@ -19,12 +20,14 @@
             <p id="session-label">FOCUS TIME</p>
         </div>
 
+        <!-- Timer Controls -->
         <div class="controls">
             <button id="start-btn" class="btn primary">Start</button>
             <button id="pause-btn" class="btn secondary" disabled>Pause</button>
             <button id="reset-btn" class="btn secondary">Reset</button>
         </div>
 
+        <!-- Settings Section -->
         <div class="settings">
             <h2>Settings</h2>
             <div class="settings-grid">
@@ -44,10 +47,10 @@
                     <label for="sessions-before-long-break">Sessions Before Long Break</label>
                     <input type="number" id="sessions-before-long-break" min="1" max="10" value="4">
                 </div>
-                 <!-- Sound Alert Setting -->
+                <!-- Sound Alert Setting -->
                 <div class="setting-item setting-item-checkbox">
-                     <label for="sound-enabled">Enable Sound Alerts</label>
-                     <input type="checkbox" id="sound-enabled" checked>
+                    <label for="sound-enabled">Enable Sound Alerts</label>
+                    <input type="checkbox" id="sound-enabled" checked>
                 </div>
             </div>
             <button id="save-settings" class="btn primary">Save Settings</button>
@@ -62,9 +65,35 @@
             <button id="clear-history-btn" class="btn secondary">Clear History</button>
         </div>
 
+        <!-- Focus Stats Section (NEW) -->
+        <div class="stats">
+            <h2>Focus Stats</h2>
+            <p id="focus-stats">Loading stats...</p>
+        </div>
+
+        <!-- Daily Study Tip Section (NEW) -->
+        <div class="daily-tip">
+            <h2>Daily Study Tip</h2>
+            <p id="tip-content">Loading today's tip...</p>
+            <button id="refresh-tip-btn" class="btn secondary">Refresh Tip</button>
+        </div>
+
+        <!-- GPT-Based Study Assistant (NEW) -->
+        <div class="assistant">
+            <h2>AI Study Assistant</h2>
+            <label for="api-key-input">OpenAI API Key (required for GPT Q&A)</label>
+            <input type="password" id="api-key-input" placeholder="sk-... (Get from OpenAI Dashboard)">
+
+            <label for="question-input">Ask a Question</label>
+            <textarea id="question-input" rows="3" placeholder="Type your study question here..."></textarea>
+
+            <button id="ask-btn" class="btn primary">Ask GPT</button>
+            <div id="assistant-answer"></div>
+        </div>
+
         <footer>
             <p>StudyBuddy - Enhanced</p>
-            <p class="version">v0.2.0</p>
+            <p class="version">v0.3.0</p>
         </footer>
     </div>
 
