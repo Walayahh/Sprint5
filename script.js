@@ -1,475 +1,144 @@
-/******************************************************
- *                 STUDYBUDDY SCRIPT.JS
- ******************************************************/
+// --- tab switching ---
+const tabs=document.querySelectorAll('.tabs button');
+const sections=document.querySelectorAll('main .tab');
 
-// -------------------- Pomodoro Timer Variables --------------------
-let workDuration = 25;
-let breakDuration = 5;
-let longBreakDuration = 15;
-let sessionsBeforeLongBreak = 4;
-let soundEnabled = true;
-let isRunning = false;
-let isPaused = false;
-let isBreak = false;
-let currentSession = 1;
-let timeLeft = workDuration * 60;
-let timer;
-let sessionHistory = [];
+tabs.forEach(btn=>btn.addEventListener('click',()=>{
+  tabs.forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  sections.forEach(sec=>sec.classList.add('hidden'));
+  document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+  if(btn.dataset.tab==='maps') loadMap();
+}));
 
-// -------------------- DOM Elements --------------------
-const minutesEl = document.getElementById('minutes');
-const secondsEl = document.getElementById('seconds');
-const sessionLabelEl = document.getElementById('session-label');
-const startBtn = document.getElementById('start-btn');
-const pauseBtn = document.getElementById('pause-btn');
-const resetBtn = document.getElementById('reset-btn');
-const saveSettingsBtn = document.getElementById('save-settings');
-const workDurationInput = document.getElementById('work-duration');
-const breakDurationInput = document.getElementById('break-duration');
-const longBreakDurationInput = document.getElementById('long-break-duration');
-const sessionsBeforeLongBreakInput = document.getElementById('sessions-before-long-break');
-const soundEnabledCheckbox = document.getElementById('sound-enabled');
-const timerCircle = document.querySelector('.timer-circle');
-const historyListEl = document.getElementById('history-list');
-const clearHistoryBtn = document.getElementById('clear-history-btn');
+// --- theme toggle ---
+const themeBtn=document.getElementById('theme-toggle');
+const storedTheme=localStorage.getItem('theme')||'dark';
+setTheme(storedTheme);
+function setTheme(t){document.body.dataset.theme=t;localStorage.setItem('theme',t);}
+themeBtn.onclick=()=>setTheme(document.body.dataset.theme==='dark'?'light':'dark');
 
-// NEW: Focus Stats
-const focusStatsEl = document.getElementById('focus-stats');
+// --- Google auth init (runs once) ---
+initGoogleClient();
 
-// NEW: Daily Tips
-const tipContentEl = document.getElementById('tip-content');
-const refreshTipBtn = document.getElementById('refresh-tip-btn');
-
-// NEW: GPT-Based Study Assistant
-const apiKeyInput = document.getElementById('api-key-input');
-const questionInput = document.getElementById('question-input');
-const askBtn = document.getElementById('ask-btn');
-const assistantAnswerEl = document.getElementById('assistant-answer');
-
-// -------------------- Audio Setup --------------------
-let workEndSound, breakEndSound;
-try {
-    workEndSound = new Audio('sounds/work_end.mp3');
-    breakEndSound = new Audio('sounds/break_end.mp3');
-} catch (error) {
-    console.error("Error loading sound files. Ensure they exist in the 'sounds' folder.", error);
-    // Optionally disable sound feature if loading fails
-    soundEnabled = false;
-    if(soundEnabledCheckbox) soundEnabledCheckbox.disabled = true;
+document.getElementById('gmail-signin').onclick=async()=>{
+  const user=await window.gapi.auth2.getAuthInstance().signIn();
+  document.getElementById('gmail-status').textContent='Hello '+user.getBasicProfile().getGivenName();
+  showGmail();
+};
+async function showGmail(){
+  const list=await listGmailThreads();
+  const ul=document.getElementById('gmail-list');ul.innerHTML='';
+  list.forEach(t=>{const li=document.createElement('li');li.textContent=`📧 ${t.snippet}`;ul.appendChild(li);});
 }
 
-// Function to play sound only if enabled
-function playSound(sound) {
-    if (soundEnabled && sound && typeof sound.play === 'function') {
-        sound.play().catch(error => console.error("Error playing sound:", error));
-    }
+// Calendar events
+ document.getElementById('calendar-refresh').onclick=async()=>{
+   const ev=await listCalendarEvents();
+   const ul=document.getElementById('calendar-events');ul.innerHTML='';
+   ev.forEach(e=>{const li=document.createElement('li');li.textContent=`${new Date(e.start.dateTime||e.start.date).toLocaleString()} – ${e.summary}`;ul.appendChild(li);});
+ };
+document.getElementById('calendar-add-session').onclick=addCalendarFocus;
+
+// Sheets export
+ document.getElementById('sheets-export').onclick=exportHistory;
+
+// Bored tab
+const gameUl=document.getElementById('game-links');games.forEach(g=>{const li=document.createElement('li');const a=document.createElement('a');a.href=g.url;a.textContent=g.name;a.target='_blank';li.appendChild(a);gameUl.appendChild(li);});
+document.getElementById('random-game').onclick=()=>{const g=games[Math.floor(Math.random()*games.length)];window.open(g.url,'_blank');};
+
+// DeepSeek ask
+const askBtn=document.getElementById('deepseek-ask');
+askBtn.onclick=async()=>{
+  const key=document.getElementById('deepseek-key').value.trim();
+  const q=document.getElementById('deepseek-question').value.trim();
+  if(!key||!q) return alert('Enter key and question');
+  document.getElementById('deepseek-answer').textContent='Thinking…';
+  try{const ans=await askDeepSeek(key,q);document.getElementById('deepseek-answer').textContent=ans;}
+  catch(e){document.getElementById('deepseek-answer').textContent='Error: '+e.message;}
+};
+
+// -- Google client config --
+const CLIENT_ID='638238698467-gigejpdafltbq74pg31o2vhmcb3dmm4u.apps.googleusercontent.com';
+const API_KEY='AIzaSyB1VBqi1FAQ-jpW7dYiC4X_UYPk-IeU6pA';
+const SCOPES='https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/spreadsheets';
+let googleInited=false;
+
+export function initGoogleClient(){
+  if(googleInited) return;
+  const script=document.createElement('script');
+  script.src='https://apis.google.com/js/api.js';
+  script.onload=()=>gapi.load('client:auth2',async()=>{
+    await gapi.client.init({apiKey:API_KEY,clientId:CLIENT_ID,scope:SCOPES,discoveryDocs:[
+      'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest',
+      'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+      'https://sheets.googleapis.com/$discovery/rest?version=v4'
+    ]});
+    googleInited=true;console.log('GAPI ready');
+  });
+  document.head.appendChild(script);
 }
 
-// -------------------- History Functions --------------------
-function renderHistory() {
-    if (!historyListEl) return;
-    historyListEl.innerHTML = '';
-    sessionHistory.forEach(entry => {
-        const li = document.createElement('li');
-        const textSpan = document.createElement('span');
-        const timeSpan = document.createElement('span');
+export async function listGmailThreads(){
+  const res=await gapi.client.gmail.users.messages.list({userId:'me',maxResults:5});
+  const msgs=await Promise.all(res.result.messages.map(m=>gapi.client.gmail.users.messages.get({userId:'me',id:m.id,format:'metadata'})));
+  return msgs.map(m=>({snippet:m.result.snippet}));
+}
 
-        textSpan.textContent = `Session ${entry.sessionNumber} (${entry.duration} min)`;
-        timeSpan.textContent = new Date(entry.timestamp)
-            .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        timeSpan.classList.add('timestamp');
+export async function listCalendarEvents(){
+  const now=new Date().toISOString();
+  const res=await gapi.client.calendar.events.list({calendarId:'primary',timeMin:now,showDeleted:false,singleEvents:true,maxResults:5,orderBy:'startTime'});
+  return res.result.items;
+}
+export async function addCalendarFocus(){
+  const start=new Date();
+  const end=new Date(start.getTime()+25*60000);
+  const ev={summary:'Focus Session',start:{dateTime:start.toISOString()},end:{dateTime:end.toISOString()}};
+  await gapi.client.calendar.events.insert({calendarId:'primary',resource:ev});
+  alert('Session added to Calendar');
+}
 
-        li.appendChild(textSpan);
-        li.appendChild(timeSpan);
-        // Newest entries on top
-        historyListEl.prepend(li);
+export async function exportHistory(){
+  const hist=JSON.parse(localStorage.getItem('studyBuddyHistory')||'[]');
+  if(!hist.length) return alert('No history');
+  const sheetTitle='StudyBuddy Sessions';
+  // create sheet if not exists, simplistic
+  const createRes=await gapi.client.sheets.spreadsheets.create({properties:{title:sheetTitle}});
+  const id=createRes.result.spreadsheetId;
+  const values=[["Session","Duration(min)","Timestamp"],...hist.map(h=>[h.sessionNumber,h.duration,h.timestamp])];
+  await gapi.client.sheets.spreadsheets.values.update({spreadsheetId:id,range:'A1',valueInputOption:'RAW',resource:{values}});
+  document.getElementById('sheets-status').textContent='Sheet created: https://docs.google.com/spreadsheets/d/'+id;
+}
+
+// Maps
+let mapLoaded=false;
+export function loadMap(){
+  if(mapLoaded) return;
+  const script=document.createElement('script');
+  script.src=`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMap`;
+  script.async=true;window.initMap=()=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const {latitude,longitude}=pos.coords;
+      const map=new google.maps.Map(document.getElementById('map'),{center:{lat:latitude,lng:longitude},zoom:14});
+      const service=new google.maps.places.PlacesService(map);
+      service.nearbySearch({location:{lat:latitude,lng:longitude},radius:2000,keyword:'coffee'},(results)=>{
+        results.forEach(p=>new google.maps.Marker({map,position:p.geometry.location,title:p.name}));
+      });
     });
+  };
+  document.head.appendChild(script);mapLoaded=true;
 }
 
-function saveHistory() {
-    localStorage.setItem('studyBuddyHistory', JSON.stringify(sessionHistory));
+// Games list
+export const games=[
+  {name:'Google Snake',url:'https://www.google.com/fbx?fbx=snake_arcade'},
+  {name:'Pac‑Man Doodle',url:'https://www.google.com/logos/2010/pacman10‑i.html'},
+  {name:'Quick Draw!',url:'https://quickdraw.withgoogle.com/'},
+];
+
+// DeepSeek
+export async function askDeepSeek(key,question){
+  const res=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'deepseek-llm-7b',messages:[{role:'user',content:question}],max_tokens:200})});
+  if(!res.ok) throw new Error(res.statusText);
+  const data=await res.json();
+  return data.choices[0].message.content.trim();
 }
 
-function loadHistory() {
-    const savedHistory = localStorage.getItem('studyBuddyHistory');
-    if (savedHistory) {
-        try {
-            sessionHistory = JSON.parse(savedHistory);
-        } catch (e) {
-            console.error("Error parsing session history from localStorage", e);
-            sessionHistory = [];
-        }
-    }
-    renderHistory();
-}
-
-function addHistoryEntry(sessionNumber, duration) {
-    const newEntry = {
-        sessionNumber,
-        duration,
-        timestamp: new Date().toISOString()
-    };
-    sessionHistory.push(newEntry);
-    saveHistory();
-    renderHistory();
-    // Update Focus Stats each time a session is completed
-    updateFocusStats();
-}
-
-function clearHistory() {
-    if (confirm('Are you sure you want to clear the session history?')) {
-        sessionHistory = [];
-        saveHistory();
-        renderHistory();
-        updateFocusStats(); // Also update stats after clearing
-    }
-}
-
-// -------------------- Load/Save Settings --------------------
-function loadSettings() {
-    const savedSettings = localStorage.getItem('studyBuddySettings');
-    if (savedSettings) {
-        try {
-            const settings = JSON.parse(savedSettings);
-            workDuration = settings.workDuration || 25;
-            breakDuration = settings.breakDuration || 5;
-            longBreakDuration = settings.longBreakDuration || 15;
-            sessionsBeforeLongBreak = settings.sessionsBeforeLongBreak || 4;
-            soundEnabled = settings.soundEnabled !== undefined ? settings.soundEnabled : true;
-
-            // Update UI
-            workDurationInput.value = workDuration;
-            breakDurationInput.value = breakDuration;
-            longBreakDurationInput.value = longBreakDuration;
-            sessionsBeforeLongBreakInput.value = sessionsBeforeLongBreak;
-            soundEnabledCheckbox.checked = soundEnabled;
-        } catch(e) {
-            console.error("Error parsing settings from localStorage", e);
-            // Use defaults
-        }
-    } else {
-        // Defaults if no settings saved
-        workDurationInput.value = workDuration;
-        breakDurationInput.value = breakDuration;
-        longBreakDurationInput.value = longBreakDuration;
-        sessionsBeforeLongBreakInput.value = sessionsBeforeLongBreak;
-        soundEnabledCheckbox.checked = soundEnabled;
-    }
-
-    // Also load stored GPT API key if any
-    const storedApiKey = localStorage.getItem('openAiApiKey');
-    if (storedApiKey) {
-        apiKeyInput.value = storedApiKey; // For convenience
-    }
-
-    // Load history
-    loadHistory();
-
-    // Reset timer after loading
-    resetTimer();
-
-    // Load daily tip
-    loadDailyTip();
-    updateFocusStats(); // Refresh stats after load
-}
-
-function saveSettings() {
-    workDuration = parseInt(workDurationInput.value) || 25;
-    breakDuration = parseInt(breakDurationInput.value) || 5;
-    longBreakDuration = parseInt(longBreakDurationInput.value) || 15;
-    sessionsBeforeLongBreak = parseInt(sessionsBeforeLongBreakInput.value) || 4;
-    soundEnabled = soundEnabledCheckbox.checked;
-
-    // Basic validation
-    if (workDuration < 1) workDuration = 1;
-    if (breakDuration < 1) breakDuration = 1;
-    if (longBreakDuration < 1) longBreakDuration = 1;
-    if (sessionsBeforeLongBreak < 1) sessionsBeforeLongBreak = 1;
-
-    // Update UI in case validation changed values
-    workDurationInput.value = workDuration;
-    breakDurationInput.value = breakDuration;
-    longBreakDurationInput.value = longBreakDuration;
-    sessionsBeforeLongBreakInput.value = sessionsBeforeLongBreak;
-
-    // Save to localStorage
-    const settings = {
-        workDuration,
-        breakDuration,
-        longBreakDuration,
-        sessionsBeforeLongBreak,
-        soundEnabled
-    };
-    localStorage.setItem('studyBuddySettings', JSON.stringify(settings));
-
-    // Save GPT API key (if any)
-    if (apiKeyInput.value) {
-        localStorage.setItem('openAiApiKey', apiKeyInput.value);
-    }
-
-    if (!isRunning) {
-        resetTimer();
-    } else {
-        console.log("Settings saved. Changes will apply on next reset or session end.");
-    }
-    alert("Settings saved!");
-}
-
-// -------------------- Timer UI --------------------
-function updateDisplay() {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-
-    minutesEl.textContent = minutes < 10 ? `0${minutes}` : minutes;
-    secondsEl.textContent = seconds < 10 ? `0${seconds}` : seconds;
-
-    const status = isBreak
-        ? (sessionLabelEl.textContent.includes("LONG") ? "Long Break" : "Short Break")
-        : "Focus Time";
-    document.title = `${minutesEl.textContent}:${secondsEl.textContent} - ${status} - StudyBuddy`;
-}
-
-function startTimer() {
-    if (isRunning && !isPaused) return;
-
-    if (!isRunning) {
-        timeLeft = isBreak ? timeLeft : workDuration * 60; // fresh session or new break
-    }
-
-    isRunning = true;
-    isPaused = false;
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
-    pauseBtn.textContent = "Pause";
-    disableSettings(true);
-
-    timer = setInterval(() => {
-        if (timeLeft > 0) {
-            timeLeft--;
-            updateDisplay();
-        } else {
-            clearInterval(timer);
-            isRunning = false;
-            // Session ended
-            if (!isBreak) {
-                // Work session done
-                playSound(workEndSound);
-                addHistoryEntry(currentSession, workDuration);
-
-                isBreak = true;
-                if (currentSession % sessionsBeforeLongBreak === 0) {
-                    timeLeft = longBreakDuration * 60;
-                    sessionLabelEl.textContent = `LONG BREAK (${longBreakDuration} min)`;
-                } else {
-                    timeLeft = breakDuration * 60;
-                    sessionLabelEl.textContent = `SHORT BREAK (${breakDuration} min)`;
-                }
-                document.body.classList.add('break-mode');
-            } else {
-                // Break session done
-                playSound(breakEndSound);
-
-                isBreak = false;
-                currentSession++;
-                timeLeft = workDuration * 60;
-                sessionLabelEl.textContent = `FOCUS TIME (${workDuration} min)`;
-                document.body.classList.remove('break-mode');
-            }
-            updateDisplay();
-            startTimer();
-        }
-    }, 1000);
-}
-
-function pauseTimer() {
-    if (!isRunning || isPaused) return;
-    clearInterval(timer);
-    isPaused = true;
-    isRunning = false;
-    pauseBtn.textContent = "Resume";
-    disableSettings(false);
-}
-
-function resumeTimer() {
-    if (!isPaused) return;
-    isPaused = false;
-    startTimer();
-    pauseBtn.textContent = "Pause";
-}
-
-function resetTimer() {
-    clearInterval(timer);
-    isRunning = false;
-    isPaused = false;
-    isBreak = false;
-    currentSession = 1;
-    timeLeft = workDuration * 60;
-
-    updateDisplay();
-    sessionLabelEl.textContent = `FOCUS TIME (${workDuration} min)`;
-
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    pauseBtn.textContent = "Pause";
-    document.body.classList.remove('break-mode');
-    disableSettings(false);
-    document.title = "StudyBuddy - Smart Study Timer";
-}
-
-function disableSettings(disable) {
-    workDurationInput.disabled = disable;
-    breakDurationInput.disabled = disable;
-    longBreakDurationInput.disabled = disable;
-    sessionsBeforeLongBreakInput.disabled = disable;
-    soundEnabledCheckbox.disabled = disable;
-    saveSettingsBtn.disabled = disable;
-    apiKeyInput.disabled = disable; // Also disable/enable GPT API key field
-}
-
-// -------------------- Focus Stats (Ticket #11) --------------------
-function updateFocusStats() {
-    // Count total sessions in history
-    const totalSessions = sessionHistory.length;
-
-    // Count how many sessions happened "today"
-    const today = new Date().toDateString();
-    const todaySessions = sessionHistory.filter(entry => {
-        const entryDate = new Date(entry.timestamp).toDateString();
-        return entryDate === today;
-    }).length;
-
-    focusStatsEl.textContent =
-        `Today’s Sessions: ${todaySessions} | Total Sessions: ${totalSessions}`;
-}
-
-// -------------------- Daily Tip (Ticket #10) --------------------
-function loadDailyTip() {
-    // Check date in localStorage
-    const lastTipDate = localStorage.getItem('lastTipDate');
-    const today = new Date().toDateString();
-
-    if (lastTipDate === today) {
-        // Already shown a tip today; load stored tip
-        const storedTip = localStorage.getItem('dailyTip');
-        if (storedTip) {
-            tipContentEl.textContent = storedTip;
-            return;
-        }
-    }
-    // Otherwise, fetch a new tip
-    fetchDailyTip();
-}
-
-function fetchDailyTip(forceNew = false) {
-    // In a real app, you'd do:
-    // fetch("https://example.com/api/productivity-tips")
-    //   .then(res => res.json())
-    //   .then(data => { ... })
-
-    // For demonstration, we'll pick from an array.
-    const tips = [
-        "Take a few minutes each day to plan your study schedule.",
-        "Use active recall: try to quiz yourself instead of just reading notes.",
-        "Prioritize tasks using the Eisenhower Matrix: urgent vs. important.",
-        "Set realistic goals for each study session to avoid burnout.",
-        "Review your notes at the end of each day to reinforce memory."
-    ];
-
-    const randomTip = tips[Math.floor(Math.random() * tips.length)];
-    tipContentEl.textContent = randomTip;
-
-    const today = new Date().toDateString();
-    localStorage.setItem('lastTipDate', today);
-    localStorage.setItem('dailyTip', randomTip);
-}
-
-// -------------------- GPT-Based Study Assistant (Ticket #9) --------------------
-async function askGptQuestion(question) {
-    const apiKey = localStorage.getItem('openAiApiKey') || ""; // from localStorage
-    if (!apiKey) {
-        throw new Error("No OpenAI API key found. Please enter your key in Settings.");
-    }
-
-    // This example uses the Chat Completion endpoint (gpt-3.5 style).
-    // If you prefer Completions, adjust accordingly.
-    const url = "https://api.openai.com/v1/chat/completions";
-    const headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-    };
-    const body = {
-        model: "gpt-3.5-turbo",
-        messages: [
-            { role: "system", content: "You are a helpful study assistant." },
-            { role: "user", content: question }
-        ],
-        max_tokens: 200,
-        temperature: 0.7
-    };
-
-    const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-        throw new Error(`OpenAI API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (data && data.choices && data.choices.length > 0) {
-        return data.choices[0].message.content.trim();
-    } else {
-        throw new Error("No answer returned from GPT");
-    }
-}
-
-// -------------------- Event Listeners --------------------
-startBtn.addEventListener('click', startTimer);
-
-pauseBtn.addEventListener('click', () => {
-    if (isPaused) {
-        resumeTimer();
-    } else if (isRunning) {
-        pauseTimer();
-    }
-});
-
-resetBtn.addEventListener('click', resetTimer);
-
-saveSettingsBtn.addEventListener('click', saveSettings);
-
-clearHistoryBtn.addEventListener('click', clearHistory);
-
-refreshTipBtn.addEventListener('click', () => {
-    // Force a new tip (ignores the once-a-day limit)
-    fetchDailyTip(true);
-});
-
-// GPT Assistant
-askBtn.addEventListener('click', async () => {
-    const question = questionInput.value.trim();
-    if (!question) {
-        assistantAnswerEl.textContent = "Please enter a question.";
-        return;
-    }
-
-    // Save API key to localStorage if typed/changed
-    if (apiKeyInput.value) {
-        localStorage.setItem('openAiApiKey', apiKeyInput.value);
-    }
-
-    assistantAnswerEl.textContent = "Thinking...";
-    try {
-        const answer = await askGptQuestion(question);
-        assistantAnswerEl.textContent = answer;
-    } catch (err) {
-        console.error(err);
-        assistantAnswerEl.textContent = `Error: ${err.message}`;
-    }
-});
-
-// -------------------- Initialize --------------------
-loadSettings();
-updateDisplay();
